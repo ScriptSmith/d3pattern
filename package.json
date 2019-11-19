@@ -1,0 +1,24 @@
+{
+  "name": "d3pattern",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/d3": "^5.7.2",
+    "source-map": "^0.7.3",
+    "source-map-loader": "^0.2.4",
+    "ts-loader": "^6.2.1",
+    "typescript": "^3.7.2",
+    "webpack": "^4.41.2",
+    "webpack-cli": "^3.3.10"
+  },
+  "dependencies": {
+    "d3": "^5.14.1",
+    "fibonacci-generator-function": "^2.0.1",
+    "prime-generator": "^1.0.0"
+  }
+}
