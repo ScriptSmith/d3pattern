@@ -1,113 +1,130 @@
 import * as d3 from "d3";
-import { triangularGenerator } from "./generators";
-var primes = require('prime-generator');
+import { primeGenerator, triangularGenerator } from "./generators";
 
 const container = d3.select("#graph");
-const dimensions = (container.node()! as Element).getBoundingClientRect()
+const dimensions = (container.node()! as Element).getBoundingClientRect();
 
 const svg = container
     .append("svg")
     .attr("width", dimensions.width)
-    .attr("height", dimensions.height)
-const graph = svg.append("g")
-const popup = document.querySelector("#popup") as HTMLDivElement
+    .attr("height", dimensions.height);
+const graph = svg.append("g");
+const popup = document.querySelector("#popup") as HTMLDivElement;
 const controls = document.querySelector("#controls") as HTMLFormElement;
 
-
 interface IPixel {
-    x: number,
-    y: number,
-    colour: string
-};
+    x: number;
+    y: number;
+    colour: string;
+}
 
-type channelType = "prime" | "triangular" | "random" | "custom";
+type ChannelType = "prime" | "triangular" | "random" | "custom";
+
+interface ICustomValues {
+    red: number;
+    green: number;
+    blue: number;
+}
 
 interface ISettings {
     pixelSize: number;
     rotation: "0" | "90";
     channelTypes: {
-        red: channelType,
-        green: channelType,
-        blue: channelType,
+        [key: string]: ChannelType,
     };
     customValues: {
-        red: number,
-        green: number,
-        blue: number,
-    }
+        [key: string]: number,
+    };
 }
 
-function getSettings(): ISettings {
-    const scaleControl = document.querySelector("#scale") as HTMLInputElement
+type IChannelValues = {
+    [key in ChannelType] : number
+};
 
-    const rotationControl = controls["rotation"];
+function getSettings(): ISettings {
+    const scaleControl = document.querySelector("#scale") as HTMLInputElement;
+
+    const rotationControl = controls.rotation;
 
     const redChannelTypeControl = controls["red-channel"];
     const greenChannelTypeControl = controls["green-channel"];
     const blueChannelTypeControl = controls["blue-channel"];
 
-    const redChannelCustomControl = document.querySelector("#red-channel-custom") as HTMLInputElement
-    const greenChannelCustomControl = document.querySelector("#green-channel-custom") as HTMLInputElement
-    const blueChannelCustomControl = document.querySelector("#blue-channel-custom") as HTMLInputElement
+    const redChannelCustomControl = document.querySelector("#red-channel-custom") as HTMLInputElement;
+    const greenChannelCustomControl = document.querySelector("#green-channel-custom") as HTMLInputElement;
+    const blueChannelCustomControl = document.querySelector("#blue-channel-custom") as HTMLInputElement;
 
     return {
-        pixelSize: parseInt(scaleControl.value),
-        rotation: rotationControl.value,
         channelTypes: {
-            red: redChannelTypeControl.value,
-            green: greenChannelTypeControl.value,
             blue: blueChannelTypeControl.value,
+            green: greenChannelTypeControl.value,
+            red: redChannelTypeControl.value,
         },
         customValues: {
-            red: parseInt(redChannelCustomControl.value),
-            green: parseInt(greenChannelCustomControl.value),
-            blue: parseInt(blueChannelCustomControl.value),
-        }
-    }
+            blue: parseInt(blueChannelCustomControl.value, 10),
+            green: parseInt(greenChannelCustomControl.value, 10),
+            red: parseInt(redChannelCustomControl.value, 10),
+        },
+        pixelSize: parseInt(scaleControl.value, 10),
+        rotation: rotationControl.value,
+    };
 }
 
-function getChannelValue(type: channelType, primeValue: number, triValue: number, randomValue: number, customValue: number) {
-    if (type == "prime") {
-        return primeValue
-    } else if (type == "triangular") {
-        return triValue
-    } else if (type == "random") {
-        return randomValue
-    } else if (type == "custom") {
-        return customValue
+function getChannelValue(type: ChannelType, primeValue: number, triValue: number,
+                         randomValue: number, customValue: number) {
+    if (type === "prime") {
+        return primeValue;
+    } else if (type === "triangular") {
+        return triValue;
+    } else if (type === "random") {
+        return randomValue;
+    } else if (type === "custom") {
+        return customValue;
     }
 }
 
 function drawGraph() {
     graph
         .selectAll("rect")
-        .remove()
+        .remove();
 
     const settings = getSettings();
 
     const pixels: IPixel[] = [];
 
-    const P = primes();
+    const P = primeGenerator(dimensions.width * dimensions.height);
     const T = triangularGenerator();
 
-    for (var i = 0; i < (settings.rotation == "0" ? dimensions.height : dimensions.width); i += settings.pixelSize) {
-        for (var j = 0; j < (settings.rotation == "0" ? dimensions.width : dimensions.height); j += settings.pixelSize) {
+    const outerLimit = settings.rotation === "0" ? dimensions.height : dimensions.width;
+    const innerLimit = settings.rotation === "0" ? dimensions.width : dimensions.height;
+
+    for (let i = 0; i < outerLimit; i += settings.pixelSize) {
+        for (let j = 0; j < innerLimit; j += settings.pixelSize) {
+            const colourValues: number[] = [];
+
             const primeMod = P.next().value % 255;
             const triMod = T.next().value % 255;
             const randomMod = Math.floor(Math.random() * 255);
 
-            const redValue = getChannelValue(settings.channelTypes.red, primeMod, triMod, randomMod, settings.customValues.red);
-            const greenValue = getChannelValue(settings.channelTypes.green, primeMod, triMod, randomMod, settings.customValues.green);
-            const blueValue = getChannelValue(settings.channelTypes.blue, primeMod, triMod, randomMod, settings.customValues.blue);
+            for (const colourName of ["red", "green", "blue"]) {
+                const generatedValues: IChannelValues = {
+                    custom: settings.customValues[colourName],
+                    prime: primeMod,
+                    random: randomMod,
+                    triangular: triMod,
+                };
 
-            const x = settings.rotation == "0" ? j : i;
-            const y = settings.rotation == "0" ? i : j;
+                colourValues.push(generatedValues[settings.channelTypes[colourName]]);
+            }
+
+            const x = settings.rotation === "0" ? j : i;
+            const y = settings.rotation === "0" ? i : j;
 
             pixels.push({
+                colour: `rgb(${colourValues[0]}, ${colourValues[1]}, ${colourValues[2]})`,
                 x,
                 y,
-                colour: `rgb(${redValue}, ${greenValue}, ${blueValue})`,
-            })
+            });
         }
     }
 
@@ -120,32 +137,31 @@ function drawGraph() {
         .attr("y", (p: IPixel) => p.y)
         .attr("width", settings.pixelSize)
         .attr("height", settings.pixelSize)
-        .style("fill", (p: IPixel) => p.colour)
-    popup.style.display = "none"
+        .style("fill", (p: IPixel) => p.colour);
+    popup.style.display = "none";
 }
 
-drawGraph()
+drawGraph();
 
-var drawTimer: NodeJS.Timer = setTimeout(() => null, 0);
+let drawTimer: NodeJS.Timer = setTimeout(() => null, 0);
 function drawGraphTimeout() {
-    popup.style.display = "block"
+    popup.style.display = "block";
 
     clearTimeout(drawTimer);
 
-    setTimeout(drawGraph, 250);
+    drawTimer = setTimeout(drawGraph, 250);
 }
 
-controls!.addEventListener("change", drawGraphTimeout)
+controls!.addEventListener("change", drawGraphTimeout);
 
 const radioGroups = ["red-channel", "green-channel", "blue-channel"];
 for (const radioGroupName of radioGroups) {
     const radioGroup = controls[radioGroupName];
-    const customValue = document.querySelector(`#${radioGroupName}-custom`) as HTMLInputElement
+    const customValue = document.querySelector(`#${radioGroupName}-custom`) as HTMLInputElement;
 
-    for (var i = 0; i < 4; i++) {
+    for (let i = 0; i < 4; i++) {
         radioGroup[i].addEventListener("change", () => {
-            customValue!.disabled = radioGroup.value != "custom"
-        })
+            customValue!.disabled = radioGroup.value !== "custom";
+        });
     }
 }
-
