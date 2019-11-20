@@ -29324,35 +29324,6 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
-/***/ "./node_modules/prime-generator/lib/index.js":
-/*!***************************************************!*\
-  !*** ./node_modules/prime-generator/lib/index.js ***!
-  \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-function* primes() {
-  var D = {}
-  yield 2
-  for(var q = 3;; q += 2) {
-    var p = D[q]
-    if(!p) {
-      yield q
-      D[q*q] = q
-    }
-    else {
-      var x = p + q
-      while(D[x] || !(x&1)) x += p
-      D[x] = p
-    }
-  }
-}
-
-module.exports = primes
-
-
-/***/ }),
-
 /***/ "./src/generators.ts":
 /*!***************************!*\
   !*** ./src/generators.ts ***!
@@ -29390,6 +29361,48 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+function primeGenerator(n) {
+    var primes, i, isq, unbroken, _i, primes_1, prime, _a, primes_2, prime;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                primes = [2];
+                for (i = 3; i < n; i++) {
+                    isq = Math.sqrt(i);
+                    unbroken = true;
+                    for (_i = 0, primes_1 = primes; _i < primes_1.length; _i++) {
+                        prime = primes_1[_i];
+                        if (prime > isq) {
+                            primes.push(i);
+                            unbroken = false;
+                            break;
+                        }
+                        else if (i % prime === 0) {
+                            unbroken = false;
+                            break;
+                        }
+                    }
+                    if (unbroken) {
+                        primes.push(i);
+                    }
+                }
+                _a = 0, primes_2 = primes;
+                _b.label = 1;
+            case 1:
+                if (!(_a < primes_2.length)) return [3 /*break*/, 4];
+                prime = primes_2[_a];
+                return [4 /*yield*/, prime];
+            case 2:
+                _b.sent();
+                _b.label = 3;
+            case 3:
+                _a++;
+                return [3 /*break*/, 1];
+            case 4: return [2 /*return*/];
+        }
+    });
+}
+exports.primeGenerator = primeGenerator;
 function triangularGenerator() {
     var i;
     return __generator(this, function (_a) {
@@ -29432,7 +29445,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var d3 = __importStar(__webpack_require__(/*! d3 */ "./node_modules/d3/index.js"));
 var generators_1 = __webpack_require__(/*! ./generators */ "./src/generators.ts");
-var primes = __webpack_require__(/*! prime-generator */ "./node_modules/prime-generator/lib/index.js");
 var container = d3.select("#graph");
 var dimensions = container.node().getBoundingClientRect();
 var svg = container
@@ -29442,10 +29454,9 @@ var svg = container
 var graph = svg.append("g");
 var popup = document.querySelector("#popup");
 var controls = document.querySelector("#controls");
-;
 function getSettings() {
     var scaleControl = document.querySelector("#scale");
-    var rotationControl = controls["rotation"];
+    var rotationControl = controls.rotation;
     var redChannelTypeControl = controls["red-channel"];
     var greenChannelTypeControl = controls["green-channel"];
     var blueChannelTypeControl = controls["blue-channel"];
@@ -29453,31 +29464,31 @@ function getSettings() {
     var greenChannelCustomControl = document.querySelector("#green-channel-custom");
     var blueChannelCustomControl = document.querySelector("#blue-channel-custom");
     return {
-        pixelSize: parseInt(scaleControl.value),
-        rotation: rotationControl.value,
         channelTypes: {
-            red: redChannelTypeControl.value,
-            green: greenChannelTypeControl.value,
             blue: blueChannelTypeControl.value,
+            green: greenChannelTypeControl.value,
+            red: redChannelTypeControl.value,
         },
         customValues: {
-            red: parseInt(redChannelCustomControl.value),
-            green: parseInt(greenChannelCustomControl.value),
-            blue: parseInt(blueChannelCustomControl.value),
-        }
+            blue: parseInt(blueChannelCustomControl.value, 10),
+            green: parseInt(greenChannelCustomControl.value, 10),
+            red: parseInt(redChannelCustomControl.value, 10),
+        },
+        pixelSize: parseInt(scaleControl.value, 10),
+        rotation: rotationControl.value,
     };
 }
 function getChannelValue(type, primeValue, triValue, randomValue, customValue) {
-    if (type == "prime") {
+    if (type === "prime") {
         return primeValue;
     }
-    else if (type == "triangular") {
+    else if (type === "triangular") {
         return triValue;
     }
-    else if (type == "random") {
+    else if (type === "random") {
         return randomValue;
     }
-    else if (type == "custom") {
+    else if (type === "custom") {
         return customValue;
     }
 }
@@ -29487,22 +29498,32 @@ function drawGraph() {
         .remove();
     var settings = getSettings();
     var pixels = [];
-    var P = primes();
+    var P = generators_1.primeGenerator(dimensions.width * dimensions.height);
     var T = generators_1.triangularGenerator();
-    for (var i = 0; i < (settings.rotation == "0" ? dimensions.height : dimensions.width); i += settings.pixelSize) {
-        for (var j = 0; j < (settings.rotation == "0" ? dimensions.width : dimensions.height); j += settings.pixelSize) {
+    var outerLimit = settings.rotation === "0" ? dimensions.height : dimensions.width;
+    var innerLimit = settings.rotation === "0" ? dimensions.width : dimensions.height;
+    for (var i = 0; i < outerLimit; i += settings.pixelSize) {
+        for (var j = 0; j < innerLimit; j += settings.pixelSize) {
+            var colourValues = [];
             var primeMod = P.next().value % 255;
             var triMod = T.next().value % 255;
             var randomMod = Math.floor(Math.random() * 255);
-            var redValue = getChannelValue(settings.channelTypes.red, primeMod, triMod, randomMod, settings.customValues.red);
-            var greenValue = getChannelValue(settings.channelTypes.green, primeMod, triMod, randomMod, settings.customValues.green);
-            var blueValue = getChannelValue(settings.channelTypes.blue, primeMod, triMod, randomMod, settings.customValues.blue);
-            var x = settings.rotation == "0" ? j : i;
-            var y = settings.rotation == "0" ? i : j;
+            for (var _i = 0, _a = ["red", "green", "blue"]; _i < _a.length; _i++) {
+                var colourName = _a[_i];
+                var generatedValues = {
+                    custom: settings.customValues[colourName],
+                    prime: primeMod,
+                    random: randomMod,
+                    triangular: triMod,
+                };
+                colourValues.push(generatedValues[settings.channelTypes[colourName]]);
+            }
+            var x = settings.rotation === "0" ? j : i;
+            var y = settings.rotation === "0" ? i : j;
             pixels.push({
+                colour: "rgb(" + colourValues[0] + ", " + colourValues[1] + ", " + colourValues[2] + ")",
                 x: x,
                 y: y,
-                colour: "rgb(" + redValue + ", " + greenValue + ", " + blueValue + ")",
             });
         }
     }
@@ -29523,7 +29544,7 @@ var drawTimer = setTimeout(function () { return null; }, 0);
 function drawGraphTimeout() {
     popup.style.display = "block";
     clearTimeout(drawTimer);
-    setTimeout(drawGraph, 250);
+    drawTimer = setTimeout(drawGraph, 250);
 }
 controls.addEventListener("change", drawGraphTimeout);
 var radioGroups = ["red-channel", "green-channel", "blue-channel"];
@@ -29532,7 +29553,7 @@ var _loop_1 = function (radioGroupName) {
     var customValue = document.querySelector("#" + radioGroupName + "-custom");
     for (var i = 0; i < 4; i++) {
         radioGroup[i].addEventListener("change", function () {
-            customValue.disabled = radioGroup.value != "custom";
+            customValue.disabled = radioGroup.value !== "custom";
         });
     }
 };
